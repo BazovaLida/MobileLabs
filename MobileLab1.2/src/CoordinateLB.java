@@ -7,28 +7,22 @@ public class CoordinateLB {
     private Integer seconds;
 
     CoordinateLB(Direction direct){
-        setDirection(direct);
-        setDefaultDegrees();
-        setDefaultMinutes();
-        setDefaultSeconds();
+        this(direct, 0, 0, 0);
     }
     CoordinateLB(Direction direct, Integer degr) throws IllegalArgumentException{
-        setDirection(direct);
-        if(!setDegrees(degr))
-            throw new IllegalArgumentException("Check parameter for degrees");
-        setDefaultMinutes();
-        setDefaultSeconds();
+        this(direct, degr, 0, 0);
     }
     CoordinateLB(Direction direct, Integer degr, Integer min) throws IllegalArgumentException{
-        setDirection(direct);
-        if(!setDegrees(degr) || !setMinutes(min))
-            throw new IllegalArgumentException("Check parameter for degrees and minutes");
-        setDefaultSeconds();
+        this(direct, degr, min, 0);
     }
     CoordinateLB(Direction direct, Integer degr, Integer min, Integer sec) throws IllegalArgumentException{
         setDirection(direct);
-        if(!(setDegrees(degr) && setMinutes(min) && setSeconds(sec)))
-            throw new IllegalArgumentException("Check parameter for degrees, minutes and seconds");
+        if(!setDegrees(degr))
+            throw new IllegalArgumentException("Invalid parameter for degrees");
+        else if(!setMinutes(min))
+            throw new IllegalArgumentException("Invalid parameter for minutes");
+        else if(!setSeconds(sec))
+            throw new IllegalArgumentException("Invalid parameter for seconds");
     }
 
     public Direction getDirection(){
@@ -90,26 +84,39 @@ public class CoordinateLB {
             return null;
         return degrees + "°" + minutes + "′" + seconds + "\" " + directionLetter;
     }
+
+//    Виправлено для випадку, коли у одного із операндів значення degr від'ємне
     public String toStringDec(){
-        String directionLetter = directionLetter();
-        Double decCoord = degrees + minutes/60.0 + seconds/3600.0;
-        return decCoord + "°" + directionLetter;
+        return getDecCoordinate() + "° " + directionLetter();
     }
+
+//    Виправлено для випадку, коли у одного із операндів значення degr від'ємне
     public CoordinateLB middleWith(CoordinateLB coord){
         return middleBetween(this, coord);
     }
 
-    private CoordinateLB middleBetween(CoordinateLB c1, CoordinateLB c2){
-        if(!c1.getDirection().equals(c2.getDirection()))
-            return null;
-        Integer resDegr = (c1.getDegrees() + c2.getDegrees())/2;
-        Integer resMin = (c1.getMinutes() + c2.getMinutes())/2;
-        if((c1.getDegrees() + c2.getDegrees()) % 2 == 1)
-            resMin += 30;
-        Integer resSec = (c1.getSeconds() + c2.getSeconds())/2;
-        if((c1.getMinutes() + c2.getMinutes()) % 2 == 1)
-            resSec += 30;
-        return new CoordinateLB(c1.getDirection(), resDegr, resMin, resSec);
+//    метод класу, що повертає:
+//    об'єкт типу CoordinateXY, що представляє середню координату між координатами,
+//    що представлені двома об'єктами, що отримані як вхідні параметри, або null,
+//    якщо об'єкти мають різний напрямок/позицію (Direction)
+    public static CoordinateLB middleBetween(CoordinateLB c1, CoordinateLB c2){
+        Direction resDir = c1.getDirection();
+        if(!c1.getDirection().equals(c2.getDirection()) ) {
+            if(c1.getDegrees() == 0 && c1.getMinutes() == 0 && c1.getSeconds() == 0){
+                resDir = c2.getDirection();
+            } else if(!(c2.getDegrees() == 0 && c2.getMinutes() == 0 && c2.getSeconds() == 0))
+                return null;
+        }
+
+        double decCoord1 = c1.getDecCoordinate();
+        double decCoord2 = c2.getDecCoordinate();
+        double midleDec = (decCoord1 + decCoord2) / 2.0;
+
+        int resDegrees = (int) Math.copySign(Math.floor(Math.abs(midleDec)), midleDec);
+        int resMin = (int) Math.copySign(Math.floor(Math.abs(midleDec - resDegrees) * 60.0), midleDec);
+        int resSec = (int) Math.copySign(Math.floor(Math.abs(midleDec - resDegrees - resMin/60.0) * 3600.0), midleDec);
+
+        return new CoordinateLB(resDir, resDegrees, Math.abs(resMin), Math.abs(resSec));
     }
 
     private String directionLetter(){
@@ -143,5 +150,11 @@ public class CoordinateLB {
             return "";
         }
         return null;
+    }
+    private double getDecCoordinate(){
+        if(degrees > 0)
+            return degrees + minutes/60.0 + seconds/3600.0;
+        else
+            return degrees - minutes/60.0 - seconds/3600.0;
     }
 }
