@@ -41,14 +41,13 @@ import org.json.JSONObject;
 
 public class ListViewController extends Fragment implements BooksAdapter.OnBookListener  {
     private static final ArrayList<Book> library = new ArrayList<>();
+    private final ArrayList<Book> tempLibrary = new ArrayList<>();
     private static BooksAdapter adapter;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         setHasOptionsMenu(true);
-        View rootView = inflater.inflate(R.layout.frag_third, container, false);
-
-        return rootView;
+        return inflater.inflate(R.layout.frag_third, container, false);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -98,10 +97,14 @@ public class ListViewController extends Fragment implements BooksAdapter.OnBookL
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
-                String notification = "Deleted book " + library.get(position).getTitle();
+                Book deleted;
+                deleted = tempLibrary.get(position);
+                tempLibrary.remove(deleted);
+                library.remove(deleted);
+                adapter.changeList(tempLibrary);
+
+                String notification = "Deleted book " + deleted.getTitle();
                 Toast.makeText(getContext(), notification, Toast.LENGTH_SHORT).show();
-                library.remove(position);
-                adapter.changeList(library);
             }
             @Override
             public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
@@ -170,6 +173,7 @@ public class ListViewController extends Fragment implements BooksAdapter.OnBookL
         } catch (NoSuchElementException e){
             Toast.makeText(context, "Exception while scanning file!", Toast.LENGTH_SHORT).show();
         }
+        tempLibrary.addAll(library);
     }
     public static void addBook(Book book){
         library.add(book);
@@ -178,7 +182,7 @@ public class ListViewController extends Fragment implements BooksAdapter.OnBookL
 
     @Override
     public void onBookClick(int position) {
-        String isbn = library.get(position).getIsbn13();
+        String isbn = tempLibrary.get(position).getIsbn13();
         Resources res  = getContext().getResources();
         int infoId = res.getIdentifier(isbn, "raw", getContext().getPackageName());
 
@@ -210,20 +214,18 @@ public class ListViewController extends Fragment implements BooksAdapter.OnBookL
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                ArrayList<Book> filtered = new ArrayList<>();
-
-                // running a for loop to compare elements.
+                tempLibrary.clear();
                 for (Book item : library) {
                     // checking if the entered string matched with any item of our recycler view.
                     if (item.getTitle().toLowerCase().contains(newText.toLowerCase())) {
                         // if the item is matched, adding it to our filtered list.
-                        filtered.add(item);
+                        tempLibrary.add(item);
                     }
                 }
-                if (filtered.isEmpty()) {
+                if (tempLibrary.isEmpty()) {
                     Toast.makeText(getContext(), "No Book Found.", Toast.LENGTH_SHORT).show();
                 }
-                adapter.changeList(filtered);
+                adapter.changeList(tempLibrary);
                 return false;
             }
         });
